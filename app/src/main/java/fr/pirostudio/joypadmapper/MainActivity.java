@@ -1,38 +1,46 @@
 package fr.pirostudio.joypadmapper;
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothHidDevice;
-import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.databinding.DataBindingUtil;
 import android.hardware.input.InputManager;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.InputDevice;
-import android.view.InputEvent;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Button;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import fr.pirostudio.joypadmapper.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity implements InputManager.InputDeviceListener, BluetoothProfile.ServiceListener  {
+
+    public String bluetoothStat;
+    public String usbStat;
 
     protected static int REQUEST_ENABLE_BT;
 
     protected static UUID MY_UUID;
 
     static {
-        MY_UUID = UUID.fromString("fr.pirostudio.joypadmapper");
+        MY_UUID = UUID.fromString("8deaf594-c2f0-11e8-a355-529269fb1459");
         REQUEST_ENABLE_BT = 1;
     }
 
@@ -41,10 +49,51 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
     protected Map<String,BtConnectThread> m_mappedBtConnect;
     protected Map<String,String> m_JoyToDevice;
 
+    static class BluetoothHandler extends Handler {
+
+        public static final int MESSAGE_CONNECTED = 0;
+        public static final int MESSAGE_DISCONNECTED = 1;
+
+        @Override
+        public void handleMessage(Message msg) {
+            // TODO Auto-generated method stub
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case MESSAGE_CONNECTED:
+                    break;
+                case MESSAGE_DISCONNECTED:
+                    break;
+            }
+            //switch (msg.what) {
+        }
+    }
+
+    BluetoothHandler btHandler = new BluetoothHandler();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        m_mappedDevices = new HashMap<>();
+        m_mappedBtConnect = new HashMap<>();
+        m_JoyToDevice = new HashMap<>();
+
+        ActivityMainBinding binding = DataBindingUtil.setContentView(this,R.layout.activity_main);
+        binding.setModel(this);
+
+        Button butTop = (Button)findViewById(R.id.buttonUp);
+        butTop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                byte hello[] = {'h','e','l','l','o'};
+                for(BtConnectThread t: m_mappedBtConnect.values())
+                {
+                    t.write(hello);
+                }
+            }
+        });
+
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         if ( adapter != null ) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -52,12 +101,27 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
             m_bt_devices = adapter.getBondedDevices();
             for (BluetoothDevice device : m_bt_devices) {
+                BluetoothClass btClass = device.getBluetoothClass();
+                boolean networking = btClass.hasService(BluetoothClass.Service.NETWORKING);
+                Log.d("t", "onCreate: btClass = '"+btClass.toString()+"'");
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress(); // MAC address
-                m_mappedBtConnect.put(deviceHardwareAddress, new BtConnectThread(device));
+                BtConnectThread thread = new BtConnectThread(device);
+                thread.setHandler(btHandler);
+                thread.start();
+                //thread.write(hello);
+                m_mappedBtConnect.put(deviceHardwareAddress, thread );
             }
+            bluetoothStat = String.valueOf(m_bt_devices.size()) + " devices";
 
         }
+        else
+        {
+            bluetoothStat = "disabled";
+        }
+
+        ArrayList<Integer> usbDevices = getGameControllerIds();
+        usbStat = String.valueOf(usbDevices.size()) + " devices";
 
         // Register for broadcasts when a device is discovered.
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);

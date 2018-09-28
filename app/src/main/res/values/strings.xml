@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">JoypadMapper</string>
+    <string name="left">left</string>
+    <string name="top">top</string>
 </resources>
