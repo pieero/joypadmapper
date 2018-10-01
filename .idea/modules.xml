@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/JoypadMapper.iml" filepath="$PROJECT_DIR$/JoypadMapper.iml" />
+      <module fileurl="file://$PROJECT_DIR$/joypadmapper.iml" filepath="$PROJECT_DIR$/joypadmapper.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
