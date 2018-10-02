@@ -5,12 +5,54 @@ import android.view.InputEvent;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class KeyEventEx {
 
     public final static int KEYCODE_DPAD_UP_LEFT = 1000;
     public final static int KEYCODE_DPAD_UP_RIGHT = 1001;
     public final static int KEYCODE_DPAD_DOWN_RIGHT = 1002;
     public final static int KEYCODE_DPAD_DOWN_LEFT = 1003;
+
+    static Set<Integer> getAxisInMotion(MotionEvent motionEvent) {
+        Set<Integer> retVal = new HashSet<>();
+        for(int axis = MotionEvent.AXIS_X; axis < MotionEvent.AXIS_GENERIC_16+1; ++axis) {
+
+            try {
+                float axisVal = motionEvent.getAxisValue(axis);
+                if (Math.abs(axisVal) > 0.1) {
+                    retVal.add(axis);
+                }
+            } catch (Exception e) {
+            }
+        }
+        return retVal;
+    }
+
+
+    static public String getMotionVectorStr(MotionEvent motionEvent)
+    {
+        int hxaxis = (int)(motionEvent.getAxisValue(MotionEvent.AXIS_HAT_X)*10.);
+        int hyaxis = (int)(motionEvent.getAxisValue(MotionEvent.AXIS_HAT_Y)*10.);
+
+        int xaxis = (int)(motionEvent.getAxisValue(MotionEvent.AXIS_X)*10.);
+        int yaxis = (int)(motionEvent.getAxisValue(MotionEvent.AXIS_Y)*10.);
+
+        String vect = "";
+        for(int axis = MotionEvent.AXIS_X; axis < MotionEvent.AXIS_GENERIC_16+1; ++axis)
+        {
+            vect += (int)(motionEvent.getAxisValue(axis)*10.);;
+            if ( axis != MotionEvent.AXIS_GENERIC_16)
+            vect += ",";
+            if ( axis == 28 )
+                axis = 31;
+        }
+
+
+        return vect;
+
+    }
 
     public int getDirectionPressed(InputEvent event) {
         if (!isDpadDevice(event)) {

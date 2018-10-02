@@ -3,6 +3,8 @@ package fr.pirostudio.joypadmapper;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.databinding.ObservableBoolean;
+import android.databinding.ObservableField;
 import android.os.Message;
 import android.util.Log;
 
@@ -19,20 +21,36 @@ public class BtConnectThread extends Thread {
     private final InputStream mmInStream;
     private final OutputStream mmOutStream;
 
+    public final ObservableField<String> name = new ObservableField<>();
+    public final ObservableBoolean disconnected = new ObservableBoolean();
+
     MainActivity.BluetoothHandler mHandler;
+
+        public BtConnectThread(BtConnectThread copy) {
+            mmDevice = copy.mmDevice;
+            disconnected.set(true);
+            name.set(mmDevice.getName());
+            mHandler = copy.mHandler;
+            mmSocket = copy.mmSocket;
+            mmInStream = copy.mmInStream;
+            mmOutStream = copy.mmOutStream;
+        }
 
         public BtConnectThread(BluetoothDevice device) {
             // Use a temporary object that is later assigned to mmSocket
             // because mmSocket is final.
-            BluetoothSocket tmp = null;
             mmDevice = device;
+            disconnected.set(true);
+            name.set(device.getName());
+
+            BluetoothSocket tmp = null;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
 
             try {
                 // Get a BluetoothSocket to connect with the given BluetoothDevice.
                 // MY_UUID is the app's UUID string, also used in the server code.
-                tmp = device.createInsecureRfcommSocketToServiceRecord(MY_UUID);
+                tmp = mmDevice.createInsecureRfcommSocketToServiceRecord(MY_UUID);
             } catch (IOException e) {
                 Log.e(TAG, "Socket's create() method failed", e);
             }
@@ -56,6 +74,10 @@ public class BtConnectThread extends Thread {
 
     }
 
+    public String getAddress() {
+            return mmDevice.getAddress();
+    }
+
     public void setHandler(MainActivity.BluetoothHandler handler)
     {
         mHandler = handler;
@@ -68,9 +90,12 @@ public class BtConnectThread extends Thread {
             try {
                 // Connect to the remote device through the socket. This call blocks
                 // until it succeeds or throws an exception.
+                disconnected.set(false);
                 mmSocket.connect();
             } catch (IOException connectException) {
                 // Unable to connect; close the socket and return.
+                mHandler.obtainMessage(MainActivity.BluetoothHandler.MESSAGE_DISCONNECTED, mmDevice.getAddress()).sendToTarget();
+                disconnected.set(true);
                 try {
                     mmSocket.close();
                 } catch (IOException closeException) {
@@ -84,7 +109,20 @@ public class BtConnectThread extends Thread {
             // the connection in a separate thread.
             Log.i(TAG, "Connection done !!!!" );
 
-            mHandler.obtainMessage(MainActivity.BluetoothHandler.MESSAGE_CONNECTED, mmDevice.getAddress());
+            mHandler.obtainMessage(MainActivity.BluetoothHandler.MESSAGE_CONNECTED, mmDevice.getAddress()).sendToTarget();
+
+            while ( mmSocket.isConnected() )
+            {
+                try{
+                    wait(1000);
+                }
+                catch(Exception e)
+                {
+                    break;
+                }
+            }
+            disconnected.set(true);
+            mHandler.obtainMessage(MainActivity.BluetoothHandler.MESSAGE_DISCONNECTED, mmDevice.getAddress()).sendToTarget();
            //manageMyConnectedSocket(mmSocket);
         }
 

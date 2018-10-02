@@ -2,19 +2,19 @@ package fr.pirostudio.joypadmapper;
 
 import android.os.Vibrator;
 import android.view.InputDevice;
-import android.view.KeyEvent;
 
 import java.util.HashMap;
 
-public class GamePadMapper implements KeyEvent.Callback {
+public class GamePadMapper  {
 
     private InputDevice m_Device;
     private BtConnectThread m_btConnect;
-    private HashMap<Integer, BtCommands> m_map;
+    private HashMap<Integer, BtCommands> m_keyMap;
+    private HashMap<Integer, BtCommands> m_axisMap;
 
     public GamePadMapper(InputDevice p_device) {
         m_Device = p_device;
-        m_map = new HashMap<>();
+        m_keyMap = new HashMap<>();
         m_btConnect = null;
     }
 
@@ -22,21 +22,25 @@ public class GamePadMapper implements KeyEvent.Callback {
         m_btConnect = p_btConnect;
     }
 
-    void addMap(int key, BtCommands command)
+    void addKeyMap(int key, BtCommands command)
     {
-        m_map.put(key,command);
+        m_keyMap.put(key,command);
+    }
+
+    void addAxisMap(int axis, BtCommands command)
+    {
+        m_axisMap.put(axis,command);
     }
 
     void clearMap()
     {
-        m_map.clear();
+        m_keyMap.clear();
     }
 
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if ( m_map.containsKey( event.getKeyCode() ) )
+    public boolean onKeyDown(int keyCode) {
+        if ( m_keyMap.containsKey( keyCode ) )
         {
-            BtCommands btCom = m_map.get(event.getKeyCode());
+            BtCommands btCom = m_keyMap.get(keyCode);
             m_btConnect.write(btCom.pressValue.getBytes());
             return true;
         }
@@ -51,24 +55,14 @@ public class GamePadMapper implements KeyEvent.Callback {
         return false;
     }
 
-    @Override
-    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
-        return false;
-    }
-
-    @Override
-    public boolean onKeyUp(int keyCode, KeyEvent event) {
-        if ( m_map.containsKey( event.getKeyCode() ) )
+    public boolean onKeyUp(int keyCode) {
+        if ( m_keyMap.containsKey( keyCode ) )
         {
-            BtCommands btCom = m_map.get(event.getKeyCode());
+            BtCommands btCom = m_keyMap.get(keyCode);
             m_btConnect.write(btCom.releaseValue.getBytes());
             return true;
         }
         return false;
     }
 
-    @Override
-    public boolean onKeyMultiple(int keyCode, int count, KeyEvent event) {
-        return false;
-    }
 }
