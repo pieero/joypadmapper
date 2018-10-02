@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
     protected static UUID MY_UUID;
 
     static {
-        MY_UUID = UUID.fromString("8deaf594-c2f0-11e8-a355-529269fb1459");
+        MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
         REQUEST_ENABLE_BT = 1;
     }
 
@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
     protected Map<String,BluetoothDevice> m_mappedDevices;
     protected Map<String,BtConnectThread> m_mappedBtConnect;
     protected Map<String,String> m_JoyToDevice;
+    protected Handler usbDeviceHandler;
 
     static class BluetoothHandler extends Handler {
 
@@ -86,10 +87,9 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
         butTop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                byte hello[] = {'h','e','l','l','o'};
                 for(BtConnectThread t: m_mappedBtConnect.values())
                 {
-                    t.write(hello);
+                    t.write("a 10\n".getBytes());
                 }
             }
         });
@@ -122,6 +122,11 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
         ArrayList<Integer> usbDevices = getGameControllerIds();
         usbStat = String.valueOf(usbDevices.size()) + " devices";
+
+        InputManager im = (InputManager) getSystemService(Context.INPUT_SERVICE);
+        im.getInputDeviceIds();
+        usbDeviceHandler = new Handler();
+        im.registerInputDeviceListener((InputManager.InputDeviceListener)this, usbDeviceHandler);
 
         // Register for broadcasts when a device is discovered.
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
@@ -248,12 +253,17 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
     @Override
     public void onInputDeviceAdded(int deviceId) {
-        getShipForID(deviceId);
+        int[] deviceIds = InputDevice.getDeviceIds();
+        InputDevice dev = InputDevice.getDevice(deviceId);
+        usbStat = String.valueOf(deviceIds.length);
     }
 
     @Override
     public void onInputDeviceRemoved(int deviceId) {
-        removeShipForID(deviceId);
+
+        int[] deviceIds = InputDevice.getDeviceIds();
+        usbStat = String.valueOf(deviceIds.length);
+
     }
 
     @Override
