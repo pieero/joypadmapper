@@ -37,6 +37,10 @@ public class GamePadMapper  {
         m_keyMap.clear();
     }
 
+    public boolean handleKey(int keyCode) {
+        return m_keyMap.containsKey( keyCode );
+    }
+
     public boolean onKeyDown(int keyCode) {
         if ( m_keyMap.containsKey( keyCode ) )
         {

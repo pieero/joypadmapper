@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <data>
+        <variable name="item" type="fr.pirostudio.joypadmapper.BtConnectThread"/>
+        <variable name="model" type="fr.pirostudio.joypadmapper.MainActivity"/>
+    </data>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{item.name, default=undefined}"/>
+
+            <Button
+                android:id="@+id/ConnectButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{item.action, default=undefined}"
+                android:enabled="@{item.actionable, default=true}"/>
+
+        </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/gamepad_label"
+        android:text="@string/Gamepad"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content" />
+    <android.support.v7.widget.AppCompatSpinner
+        android:id="@+id/gamepad_spinner"
+        android:text="@string/Gamepad"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:entries="@{model.gamepad_list}"
+        android:selection="@={item.gamepadIndex}"
+        >
+
+    </android.support.v7.widget.AppCompatSpinner>
+    </LinearLayout>
+    </LinearLayout>
+
+</layout>

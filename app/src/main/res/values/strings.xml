@@ -3,4 +3,10 @@
     <string name="left">left</string>
     <string name="top">top</string>
     <string name="Connect">Connect</string>
+    <string name="Connected">Connected</string>
+    <string name="Connecting">Connecting</string>
+    <string name="Disconnected">Disconnected</string>
+    <string name="Gamepad">Gamepad</string>
+    <string name="NoGamepad">No Gamepad</string>
+    <string name="link">Link</string>
 </resources>

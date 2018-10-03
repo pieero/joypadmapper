@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.databinding.DataBindingUtil;
+import android.databinding.ObservableArrayList;
 import android.databinding.ObservableField;
 import android.hardware.input.InputManager;
 import android.os.Handler;
@@ -18,6 +19,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -26,12 +28,15 @@ import android.widget.TabHost;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import fr.pirostudio.joypadmapper.databinding.ActivityMainBinding;
+import fr.pirostudio.joypadmapper.databinding.BluetoothComViewBinding;
 
 public class MainActivity extends AppCompatActivity implements InputManager.InputDeviceListener, BluetoothProfile.ServiceListener  {
 
@@ -39,6 +44,8 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
     public final ObservableField<String> usbStat = new ObservableField<>();
     public final ObservableField<String> usbLog = new ObservableField<>();
     public final ObservableField<String> usbLog2 = new ObservableField<>();
+    public final ObservableArrayList<String> gamepad_list = new ObservableArrayList<>();
+    public final ArrayList<Integer> gamepadId_list = new ArrayList<>();
 
     public List<InputDevice> m_connectedPads;
     public Map<Integer, GamePadMapper> m_mappedPads;
@@ -56,26 +63,8 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
     protected Map<String,BluetoothDevice> m_mappedDevices;
     protected Map<String,BtConnectThread> m_mappedBtConnect;
     protected Map<String,String> m_JoyToDevice;
+    protected Map<Integer,String> m_usbId_to_btAddress;
     protected Handler usbDeviceHandler;
-
-    class BluetoothHandler extends Handler {
-
-        public static final int MESSAGE_CONNECTED = 0;
-        public static final int MESSAGE_DISCONNECTED = 1;
-
-        @Override
-        public void handleMessage(Message msg) {
-            // TODO Auto-generated method stub
-            super.handleMessage(msg);
-            switch (msg.what) {
-                case MESSAGE_CONNECTED:
-                    break;
-                case MESSAGE_DISCONNECTED:
-                    break;
-            }
-            //switch (msg.what) {
-        }
-    }
 
     class UsbDeviceHandler extends Handler {
 
@@ -84,7 +73,6 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
         @Override
         public void handleMessage(Message msg) {
-            // TODO Auto-generated method stub
             super.handleMessage(msg);
             int deviceId = msg.arg1;
             switch (msg.what) {
@@ -102,7 +90,7 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
     ActivityMainBinding binding;
 
-    BluetoothHandler btHandler = new BluetoothHandler();
+    BluetoothHandler btHandler = new BluetoothHandler(this);
     UsbDeviceHandler usbHandler = new UsbDeviceHandler();
 
     @Override
@@ -116,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
         m_connectedPads = new ArrayList<>();
         m_mappedPads = new HashMap<>();
-
+        m_usbId_to_btAddress = new HashMap<>();
         usbLog.set("Nothing");
 
         binding = DataBindingUtil.setContentView(this,R.layout.activity_main);
@@ -161,62 +149,49 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
                 Log.d("t", "onCreate: btClass = '"+btClass.toString()+"'");
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress(); // MAC address
-                BtConnectThread thread = new BtConnectThread(device);
-                thread.setHandler(btHandler);
+                BtConnectThread btConnect = new BtConnectThread(device, MainActivity.this);
+                btConnect.setHandler(btHandler);
 
                 TabHost.TabSpec spec = host.newTabSpec(device.getName());
-                final LinearLayout innerLay = new LinearLayout(MainActivity.this);
-                innerLay.setOrientation(LinearLayout.VERTICAL);
-                Button connect = new Button(MainActivity.this);
-                connect.setText(R.string.Connect);
-                connect.setTag(device.getAddress());
-                connect.setOnClickListener(new View.OnClickListener() {
+                BluetoothComViewBinding btComBinding = DataBindingUtil.inflate( getLayoutInflater(),R.layout.bluetooth_com_view,null,true);
+                btComBinding.setItem(btConnect);
+                btComBinding.setModel(this);
+                View bluetoothComView = btComBinding.getRoot();
+
+                Button connectButton = bluetoothComView.findViewById(R.id.ConnectButton);
+                connectButton.setTag(device.getAddress());
+                connectButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         String btAddress = (String)v.getTag();
                         try {
                             BtConnectThread thr = m_mappedBtConnect.get(btAddress);
-                            thr = new BtConnectThread(thr);
-                            m_mappedBtConnect.put(thr.getAddress(), thr);
-                            thr.start();
+                            if ( thr.isConnected() ) {
+                                thr.cancel();
+                            }
+                            else{
+                                thr.start();
+                            }
                         }
                         catch(Exception e) {
 
                         }
                     }
                 });
-                //thread.start();
-                innerLay.addView(connect);
 
                 class MyFactory implements TabHost.TabContentFactory {
-
-                    private LinearLayout layout;
-
-                    public MyFactory(LinearLayout p_layout) {
-                        layout = p_layout;
-                    }
-
-                    public View createTabContent(String tag)
-                    {
-                        return layout;
-                    }
+                    private final View v;
+                    public MyFactory(View pv) { v = pv; }
+                    public View createTabContent(String tag) { return v; }
                 }
-                spec.setContent(new MyFactory(innerLay));
-                /*
-                * new TabHost.TabContentFactory(){
-                    public View createTabContent(String tag)
-                    {
-                        return innerLay;
-                    }
-                }
-                * */
+                spec.setContent(new MyFactory(bluetoothComView));
 
                 spec.setIndicator(device.getName());
                 host.addTab(spec);
 
                 //thread.start();
                 //thread.write(hello);
-                m_mappedBtConnect.put(deviceHardwareAddress, thread );
+                m_mappedBtConnect.put(deviceHardwareAddress, btConnect );
             }
 
             //host.setup();
@@ -231,6 +206,18 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
         ArrayList<Integer> usbDevices = getGameControllerIds();
         usbStat.set(String.valueOf(usbDevices.size()) + " gamepads");
+
+        gamepad_list.clear();
+        gamepadId_list.clear();
+        gamepad_list.add(this.getResources().getString(R.string.NoGamepad));
+        gamepadId_list.add(-1);
+        for(Integer usbId: usbDevices)
+        {
+            InputDevice dev = InputDevice.getDevice(usbId);
+            gamepad_list.add(usbName(dev));
+            gamepadId_list.add(usbId);
+        }
+
 
         InputManager im = (InputManager) getSystemService(Context.INPUT_SERVICE);
         im.getInputDeviceIds();
@@ -303,10 +290,11 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
             }
             usbLog2.set(axisStr);
         }
-        if ( m_mappedPads.containsKey(ev.getDeviceId()) ) {
+        if ( m_usbId_to_btAddress.containsKey(ev.getDeviceId()) && m_mappedPads.containsKey(ev.getDeviceId()) ) {
             if (KeyEventEx.isDpadDevice(ev)) {
-                retVal = m_mappedPads.get(ev.getDeviceId()).onKeyDown(press);
+                m_mappedPads.get(ev.getDeviceId()).onKeyDown(press);
             }
+            retVal = true;
         } else {
             retVal = super.dispatchGenericMotionEvent(ev);
         }
@@ -320,26 +308,71 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
         if ( ev.getAction() == KeyEvent.ACTION_DOWN && keyCode != KeyEvent.KEYCODE_DPAD_CENTER ) {
             usbLog.set(KeyEvent.keyCodeToString(keyCode));
         }
-        if ( m_mappedPads.containsKey(ev.getDeviceId()) ) {
-            if ( ev.getAction() == KeyEvent.ACTION_DOWN ) {
-                retVal = m_mappedPads.get(ev.getDeviceId()).onKeyDown(ev.getKeyCode());
+        if ( m_usbId_to_btAddress.containsKey(ev.getDeviceId()) && m_mappedPads.containsKey(ev.getDeviceId()) ) {
+            GamePadMapper mapper = m_mappedPads.get(ev.getDeviceId());
+            if ( mapper.handleKey(keyCode) ) {
+                if (ev.getAction() == KeyEvent.ACTION_DOWN) {
+                    retVal = mapper.onKeyDown(keyCode);
+                }
+                if (ev.getAction() == KeyEvent.ACTION_UP) {
+                    retVal = mapper.onKeyUp(keyCode);
+                }
+            } else {
+                // Add to view and to map
+                View linkView = getLayoutInflater().inflate(R.layout.gamepad_key_link, null);
+                Button keyButton = linkView.findViewById(R.id.button_key);
+                keyButton.setText(KeyEvent.keyCodeToString(keyCode));
+                Button linkButton = linkView.findViewById(R.id.button_key);
+                linkButton.setText(R.string.link);
             }
-            if ( ev.getAction() == KeyEvent.ACTION_UP ) {
-                retVal = m_mappedPads.get(ev.getDeviceId()).onKeyUp(ev.getKeyCode());
-            }
+
         } else {
             retVal = super.dispatchKeyEvent(ev);
         }
         return retVal;
     }
 
+    protected String usbName(InputDevice dev) {
+        return dev.getName()+"("+String.valueOf(dev.getId())+")";
+    }
+
     @Override
     public void onInputDeviceAdded(int deviceId) {
+        boolean found = false;
+        for(String s:gamepad_list)
+        {
+            if ( s.startsWith(String.valueOf(deviceId)+":") )
+            {
+                found = true;
+            }
+        }
+        if (! found )
+        {
+            InputDevice dev = InputDevice.getDevice(deviceId);
+            gamepad_list.add(usbName(dev));
+            gamepadId_list.add(deviceId);
+        }
         usbHandler.obtainMessage(UsbDeviceHandler.MESSAGE_CONNECTED, deviceId).sendToTarget();
     }
 
     @Override
     public void onInputDeviceRemoved(int deviceId) {
+        int index = 0;
+        int foundIndex = -1;
+        for(String s:gamepad_list)
+        {
+            if ( s.startsWith(String.valueOf(deviceId)+":") )
+            {
+                foundIndex = index;
+            }
+            index++;
+        }
+        if ( foundIndex != -1 )
+        {
+            gamepad_list.remove(foundIndex);
+            gamepadId_list.remove(foundIndex);
+
+        }
         usbHandler.obtainMessage(UsbDeviceHandler.MESSAGE_DISCONNECTED, deviceId).sendToTarget();
     }
 

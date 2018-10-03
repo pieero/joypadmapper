@@ -3,9 +3,12 @@ package fr.pirostudio.joypadmapper;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
+import android.databinding.BaseObservable;
+import android.databinding.Bindable;
 import android.databinding.ObservableBoolean;
 import android.databinding.ObservableField;
-import android.os.Message;
+import android.databinding.ObservableInt;
 import android.util.Log;
 
 import java.io.IOException;
@@ -14,35 +17,119 @@ import java.io.OutputStream;
 
 import static fr.pirostudio.joypadmapper.MainActivity.MY_UUID;
 
-public class BtConnectThread extends Thread {
+public class BtConnectThread extends BaseObservable {
     private static final String TAG = "JoypadMapper";
     private final BluetoothSocket mmSocket;
     private final BluetoothDevice mmDevice;
     private final InputStream mmInStream;
     private final OutputStream mmOutStream;
 
-    public final ObservableField<String> name = new ObservableField<>();
-    public final ObservableBoolean disconnected = new ObservableBoolean();
+    private final Context mmContext;
 
-    MainActivity.BluetoothHandler mHandler;
+    static class StatusInfo {
+        public final int name;
+        public final int action;
+        public final boolean actionable;
 
-        public BtConnectThread(BtConnectThread copy) {
-            mmDevice = copy.mmDevice;
-            disconnected.set(true);
-            name.set(mmDevice.getName());
-            mHandler = copy.mHandler;
-            mmSocket = copy.mmSocket;
-            mmInStream = copy.mmInStream;
-            mmOutStream = copy.mmOutStream;
+        public StatusInfo(int name, int action, boolean actionable) {
+            this.name = name;
+            this.action = action;
+            this.actionable = actionable;
         }
+    }
 
-        public BtConnectThread(BluetoothDevice device) {
+    public final ObservableField<String> name = new ObservableField<>();
+    public final ObservableBoolean actionable = new ObservableBoolean();
+    public final ObservableField<String> status = new ObservableField<>();
+    public final ObservableField<String> action = new ObservableField<>();
+    private int gamepadIndex = -1;
+
+    @Bindable({"gamepadIndex"})
+    public int getGamepadIndex() {
+        return gamepadIndex;
+    }
+
+    @Bindable({"gamepadIndex"})
+    public void setGamepadIndex(int index) {
+        gamepadIndex = index;
+        UsbLinkedObject obj = new UsbLinkedObject(index,mmDevice.getAddress());
+        mHandler.obtainMessage(BluetoothHandler.MESSAGE_USB_LINKED, obj).sendToTarget();
+    }
+
+    BluetoothHandler mHandler;
+
+    public static StatusInfo STATUS_CONNECTED = new StatusInfo(R.string.Connected, R.string.Disconnected, true);
+    public static StatusInfo STATUS_CONNECTING = new StatusInfo(R.string.Connecting, R.string.Connecting, false);
+    public static StatusInfo STATUS_DISCONNECTED = new StatusInfo(R.string.Disconnected, R.string.Connect, true);
+
+    protected void updateStatusInfo(StatusInfo info)
+    {
+        status.set(mmContext.getResources().getString(info.name));
+        action.set(mmContext.getResources().getString(info.action));
+        actionable.set(info.actionable);
+    }
+
+    public class ConnectionThread extends Thread {
+
+        public void run() {
+            // Cancel discovery because it otherwise slows down the connection.
+            BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
+            boolean stop = false;
+            try {
+                // Connect to the remote device through the socket. This call blocks
+                // until it succeeds or throws an exception.
+                updateStatusInfo(STATUS_CONNECTING);
+                mmSocket.connect();
+                updateStatusInfo(STATUS_CONNECTED);
+            } catch (IOException connectException) {
+                // Unable to connect; close the socket and return.
+                updateStatusInfo(STATUS_DISCONNECTED);
+                mHandler.obtainMessage(BluetoothHandler.MESSAGE_DISCONNECTED, mmDevice.getAddress()).sendToTarget();
+                try {
+                    mmSocket.close();
+                } catch (IOException closeException) {
+                    Log.e(TAG, "Could not close the client socket", closeException);
+                }
+                Log.e(TAG, "Failed to connect !!!!" );
+                return;
+            }
+
+            // The connection attempt succeeded. Perform work associated with
+            // the connection in a separate thread.
+            Log.i(TAG, "Connection done !!!!" );
+
+            mHandler.obtainMessage(BluetoothHandler.MESSAGE_CONNECTED, mmDevice.getAddress()).sendToTarget();
+
+            while ( mmSocket.isConnected() )
+            {
+                try{
+                    wait(500);
+                }
+                catch(Exception e)
+                {
+                    break;
+                }
+            }
+            updateStatusInfo(STATUS_DISCONNECTED);
+            mHandler.obtainMessage(BluetoothHandler.MESSAGE_DISCONNECTED, mmDevice.getAddress()).sendToTarget();
+            try {
+                mmSocket.close();
+            } catch (IOException closeException) {
+                Log.e(TAG, "Could not close the client socket", closeException);
+            }
+            //manageMyConnectedSocket(mmSocket);
+        }
+    }
+
+    private ConnectionThread thread;
+
+        public BtConnectThread(BluetoothDevice device, Context context) {
             // Use a temporary object that is later assigned to mmSocket
             // because mmSocket is final.
+            mmContext = context;
             mmDevice = device;
-            disconnected.set(true);
             name.set(device.getName());
-
+            updateStatusInfo(STATUS_DISCONNECTED);
             BluetoothSocket tmp = null;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
@@ -74,57 +161,49 @@ public class BtConnectThread extends Thread {
 
     }
 
+    public void start() {
+            if ( thread == null )
+            {
+                thread = new ConnectionThread();
+            }
+            if ( thread.getState() == Thread.State.NEW && mmSocket.isConnected() == false )
+            {
+                thread.start();
+            }
+            else if ( thread.getState() == Thread.State.RUNNABLE ||
+                    thread.getState() == Thread.State.WAITING ||
+                    thread.getState() == Thread.State.TIMED_WAITING ||
+                    thread.getState() == Thread.State.BLOCKED ||
+                    mmSocket.isConnected() )
+            {
+                cancel();
+                thread = new ConnectionThread();
+                thread.start();
+            }
+            else
+            {
+                thread = new ConnectionThread();
+                thread.start();
+            }
+    }
+
     public String getAddress() {
             return mmDevice.getAddress();
     }
 
-    public void setHandler(MainActivity.BluetoothHandler handler)
+    public boolean isConnected() {
+            boolean retVal = false;
+            if ( mmSocket !=  null )
+            {
+                retVal = mmSocket.isConnected();
+            }
+            return retVal;
+    }
+
+    public void setHandler(BluetoothHandler handler)
     {
         mHandler = handler;
     }
-
-        public void run() {
-            // Cancel discovery because it otherwise slows down the connection.
-            BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
-            boolean stop = false;
-            try {
-                // Connect to the remote device through the socket. This call blocks
-                // until it succeeds or throws an exception.
-                disconnected.set(false);
-                mmSocket.connect();
-            } catch (IOException connectException) {
-                // Unable to connect; close the socket and return.
-                mHandler.obtainMessage(MainActivity.BluetoothHandler.MESSAGE_DISCONNECTED, mmDevice.getAddress()).sendToTarget();
-                disconnected.set(true);
-                try {
-                    mmSocket.close();
-                } catch (IOException closeException) {
-                    Log.e(TAG, "Could not close the client socket", closeException);
-                }
-                Log.e(TAG, "Failed to connect !!!!" );
-                return;
-            }
-
-            // The connection attempt succeeded. Perform work associated with
-            // the connection in a separate thread.
-            Log.i(TAG, "Connection done !!!!" );
-
-            mHandler.obtainMessage(MainActivity.BluetoothHandler.MESSAGE_CONNECTED, mmDevice.getAddress()).sendToTarget();
-
-            while ( mmSocket.isConnected() )
-            {
-                try{
-                    wait(1000);
-                }
-                catch(Exception e)
-                {
-                    break;
-                }
-            }
-            disconnected.set(true);
-            mHandler.obtainMessage(MainActivity.BluetoothHandler.MESSAGE_DISCONNECTED, mmDevice.getAddress()).sendToTarget();
-           //manageMyConnectedSocket(mmSocket);
-        }
 
     public void write(byte[] bytes) {
         try {
