@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+<data>
+    <variable
+        name="command"
+        type="fr.pirostudio.joypadmapper.BtCommands" />
+</data>
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:columnCount="2"
+        android:rowCount="3"
+        >
+        <TextView
+            android:layout_column="0"
+            android:layout_row="0"
+            android:layout_columnSpan="2"
+            android:text="@{command.keyName}"
+            />
+        <TextView
+            android:layout_column="0"
+            android:layout_row="1"
+            android:text="@string/keyPress"
+            />
+        <EditText
+            android:layout_column="1"
+            android:layout_row="1"
+            android:layout_gravity="fill_horizontal"
+            android:text="@={command.pressValue}"
+            />
+        <TextView
+            android:layout_column="0"
+            android:layout_row="2"
+            android:text="@string/keyRelease"
+            />
+        <EditText
+            android:layout_column="1"
+            android:layout_row="2"
+            android:layout_gravity="fill_horizontal"
+            android:text="@={command.releaseValue}"
+            />
+    </GridLayout>
+</layout>

@@ -1,6 +1,5 @@
 package fr.pirostudio.joypadmapper;
 
-import android.os.Vibrator;
 import android.view.InputDevice;
 
 import java.util.HashMap;
@@ -27,6 +26,10 @@ public class GamePadMapper  {
         m_keyMap.put(key,command);
     }
 
+    public BtCommands getKeyCommand(int keyCode) {
+        return m_keyMap.get(keyCode);
+    }
+
     void addAxisMap(int axis, BtCommands command)
     {
         m_axisMap.put(axis,command);
@@ -44,16 +47,10 @@ public class GamePadMapper  {
     public boolean onKeyDown(int keyCode) {
         if ( m_keyMap.containsKey( keyCode ) )
         {
-            BtCommands btCom = m_keyMap.get(keyCode);
-            m_btConnect.write(btCom.pressValue.getBytes());
-            return true;
-        }
-        else
-        {
-            if ( m_Device.getVibrator() != null && m_Device.getVibrator().hasVibrator() )
-            {
-                Vibrator v = m_Device.getVibrator();
-                v.vibrate(200);
+            if ( m_btConnect != null && m_btConnect.isConnected()) {
+                BtCommands btCom = m_keyMap.get(keyCode);
+                m_btConnect.write(btCom.getPressValue().getBytes());
+                return true;
             }
         }
         return false;
@@ -62,9 +59,11 @@ public class GamePadMapper  {
     public boolean onKeyUp(int keyCode) {
         if ( m_keyMap.containsKey( keyCode ) )
         {
-            BtCommands btCom = m_keyMap.get(keyCode);
-            m_btConnect.write(btCom.releaseValue.getBytes());
-            return true;
+            if ( m_btConnect != null && m_btConnect.isConnected() ) {
+                BtCommands btCom = m_keyMap.get(keyCode);
+                m_btConnect.write(btCom.getReleaseValue().getBytes());
+                return true;
+            }
         }
         return false;
     }

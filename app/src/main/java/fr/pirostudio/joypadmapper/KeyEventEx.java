@@ -30,8 +30,25 @@ public class KeyEventEx {
         return retVal;
     }
 
+    public Set<Integer> buildKeyCodeFromAxis(MotionEvent ev) {
+        Set<Integer> retVal = new HashSet<>();
+        Set<Integer> axis = getAxisInMotion(ev);
+        for(Integer x : axis )
+        {
+            if ( ev.getAxisValue(x) >= (float)1. )
+            {
+                retVal.add(1000 + x);
+            }
+            if ( ev.getAxisValue(x) <= (float)-1. )
+            {
+                retVal.add(2000 + x);
+            }
+        }
+        return retVal;
+    }
 
-    static public String getMotionVectorStr(MotionEvent motionEvent)
+
+        static public String getMotionVectorStr(MotionEvent motionEvent)
     {
         int hxaxis = (int)(motionEvent.getAxisValue(MotionEvent.AXIS_HAT_X)*10.);
         int hyaxis = (int)(motionEvent.getAxisValue(MotionEvent.AXIS_HAT_Y)*10.);

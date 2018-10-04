@@ -46,13 +46,35 @@ class BluetoothHandler extends Handler {
                         Map.Entry pair = (Map.Entry)it.next();
                         if ( pair.getValue() == link.btAddress ) {
                             m_main.usbLog2.set(String.format(Locale.ENGLISH, "unmap %d(%d) -> %s",pair.getKey(), link.usbIndex, link.btAddress));
+                            Integer usbDeviceId = (Integer)pair.getKey();
+                            if (m_main.m_mappedPads.containsKey(usbDeviceId)) {
+                                m_main.m_mappedPads.get(usbDeviceId).setBtConnect(null);
+                            }
+                            else
+                            {
+                                m_main.usbLog2.set("unmap: no usbDev "+ String.valueOf(usbDeviceId) +" in m_mappedPads");
+                            }
                             it.remove(); // avoids a ConcurrentModificationException
                             break;
                         }
                     }
                 }else{
-                    m_main.m_usbId_to_btAddress.put( m_main.gamepadId_list.get(link.usbIndex), link.btAddress);
-                    m_main.usbLog2.set(String.format(Locale.ENGLISH, "map %d(%d) -> %s", m_main.gamepadId_list.get(link.usbIndex), link.usbIndex, link.btAddress));
+                    if( m_main.gamepadId_list.size() > link.usbIndex ) {
+                        int usbDeviceId = m_main.gamepadId_list.get(link.usbIndex);
+                        m_main.m_usbId_to_btAddress.put(usbDeviceId, link.btAddress);
+                        if (m_main.m_mappedPads.containsKey(usbDeviceId) && m_main.m_mappedBtConnect.containsKey(link.btAddress)) {
+                            m_main.m_mappedPads.get(usbDeviceId).setBtConnect(m_main.m_mappedBtConnect.get(link.btAddress));
+                        }
+                        else
+                        {
+                            m_main.usbLog2.set("map: no usbDev "+ String.valueOf(usbDeviceId) +" in m_mappedPads OR '"+link.btAddress+"' in m_mappedBtConnect");
+                        }
+                        m_main.usbLog2.set(String.format(Locale.ENGLISH, "map %d(%d) -> %s", m_main.gamepadId_list.get(link.usbIndex), link.usbIndex, link.btAddress));
+                    }
+                    else
+                    {
+                        m_main.usbLog2.set("map: no index "+ String.valueOf(link.usbIndex) +" in gamepadId_list");
+                    }
                 }
                 break;
         }

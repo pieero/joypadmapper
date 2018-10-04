@@ -9,4 +9,9 @@
     <string name="Gamepad">Gamepad</string>
     <string name="NoGamepad">No Gamepad</string>
     <string name="link">Link</string>
+    <string name="LinkKeyCode">Link key code</string>
+    <string name="keyPress">key press</string>
+    <string name="keyRelease">key release</string>
+    <string name="load">load</string>
+    <string name="save">Save</string>
 </resources>

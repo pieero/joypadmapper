@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
+<layout>
+<data>
+    <variable name="command" type="fr.pirostudio.joypadmapper.BtCommands" />
+</data>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
 
     <Button
         android:id="@+id/button_key"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Button" />
+        android:text="@{command.keyName , default=NA}" />
 
     <Button
         android:id="@+id/button_link"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:text="Button" />
-</LinearLayout>
+</LinearLayout></layout>
