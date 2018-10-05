@@ -127,11 +127,7 @@ public class BtConnectThread extends BaseObservable {
                 // Unable to connect; close the socket and return.
                 updateStatusInfo(STATUS_DISCONNECTED);
                 mHandler.obtainMessage(BluetoothHandler.MESSAGE_DISCONNECTED, mmDevice.getAddress()).sendToTarget();
-                try {
-                    mmSocket.close();
-                } catch (IOException closeException) {
-                    Log.e(TAG, "Could not close the client socket", closeException);
-                }
+                cancel();
                 Log.e(TAG, "Failed to connect !!!!" );
                 return;
             }
@@ -141,7 +137,7 @@ public class BtConnectThread extends BaseObservable {
             Log.i(TAG, "Connection done !!!!" );
 
             mHandler.obtainMessage(BluetoothHandler.MESSAGE_CONNECTED, mmDevice.getAddress()).sendToTarget();
-
+/*
             while ( mmSocket.isConnected() )
             {
                 try{
@@ -159,6 +155,7 @@ public class BtConnectThread extends BaseObservable {
             } catch (IOException closeException) {
                 Log.e(TAG, "Could not close the client socket", closeException);
             }
+            */
             //manageMyConnectedSocket(mmSocket);
         }
 
@@ -202,6 +199,18 @@ public class BtConnectThread extends BaseObservable {
             } catch (IOException e) {
                 Log.e(TAG, "Could not close the client socket", e);
             }
+            try {
+                mmOutStream.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Could not close the out stream", e);
+            }
+            try {
+                mmInStream.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Could not close the in stream", e);
+            }
+            updateStatusInfo(STATUS_DISCONNECTED);
+            mHandler.obtainMessage(BluetoothHandler.MESSAGE_DISCONNECTED, mmDevice.getAddress()).sendToTarget();
         }
 /*
 private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();

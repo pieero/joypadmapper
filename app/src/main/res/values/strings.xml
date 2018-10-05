@@ -14,4 +14,5 @@
     <string name="keyRelease">key release</string>
     <string name="load">load</string>
     <string name="save">Save</string>
+    <string name="Mapping">Mapping</string>
 </resources>

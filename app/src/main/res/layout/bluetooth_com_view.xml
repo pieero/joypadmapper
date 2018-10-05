@@ -18,6 +18,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="fill_horizontal"
                 android:text="@{item.name, default=undefined}"/>
 
             <Button
@@ -40,7 +41,6 @@
             android:layout_height="wrap_content" />
         <android.support.v7.widget.AppCompatSpinner
             android:id="@+id/gamepad_spinner"
-            android:text="@string/Gamepad"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:entries="@{model.gamepad_list}"
@@ -56,7 +56,7 @@
 
             <TextView
                 android:id="@+id/map_label"
-                android:text="@string/Gamepad"
+                android:text="@string/Mapping"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="fill_horizontal"/>
@@ -75,7 +75,8 @@
         </LinearLayout>
         <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:layout_gravity="fill_vertical">
             <LinearLayout
                 android:id="@+id/map_layout"
                 android:layout_width="match_parent"

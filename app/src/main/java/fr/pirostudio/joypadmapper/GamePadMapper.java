@@ -14,6 +14,7 @@ public class GamePadMapper  {
     public GamePadMapper(InputDevice p_device) {
         m_Device = p_device;
         m_keyMap = new HashMap<>();
+        m_axisMap = new HashMap<>();
         m_btConnect = null;
     }
 
@@ -40,8 +41,11 @@ public class GamePadMapper  {
         m_keyMap.clear();
     }
 
-    public boolean handleKey(int keyCode) {
+    public boolean handleKeyCode(int keyCode) {
         return m_keyMap.containsKey( keyCode );
+    }
+    public boolean handleAxisCode(int keyCode) {
+        return m_axisMap.containsKey( keyCode );
     }
 
     public boolean onKeyDown(int keyCode) {
@@ -55,6 +59,19 @@ public class GamePadMapper  {
         }
         return false;
     }
+
+    public boolean onAxisKeyDown(int keyCode) {
+        if ( m_axisMap.containsKey( keyCode ) )
+        {
+            if ( m_btConnect != null && m_btConnect.isConnected()) {
+                BtCommands btCom = m_axisMap.get(keyCode);
+                m_btConnect.write(btCom.getPressValue().getBytes());
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     public boolean onKeyUp(int keyCode) {
         if ( m_keyMap.containsKey( keyCode ) )
