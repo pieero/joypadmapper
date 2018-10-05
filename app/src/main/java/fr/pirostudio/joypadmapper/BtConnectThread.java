@@ -2,27 +2,25 @@ package fr.pirostudio.joypadmapper;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 import android.databinding.BaseObservable;
 import android.databinding.Bindable;
 import android.databinding.ObservableBoolean;
 import android.databinding.ObservableField;
-import android.databinding.ObservableInt;
 import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
-import static fr.pirostudio.joypadmapper.MainActivity.MY_UUID;
+import java.util.UUID;
 
 public class BtConnectThread extends BaseObservable {
     private static final String TAG = "JoypadMapper";
-    private final BluetoothSocket mmSocket;
     private final BluetoothDevice mmDevice;
-    private final InputStream mmInStream;
-    private final OutputStream mmOutStream;
 
     private final Context mmContext;
 
@@ -71,6 +69,47 @@ public class BtConnectThread extends BaseObservable {
 
     public class ConnectionThread extends Thread {
 
+        private BluetoothSocket mmSocket;
+        private final InputStream mmInStream;
+        private final OutputStream mmOutStream;
+
+        protected final UUID MY_UUID;
+
+        public ConnectionThread() {
+            BluetoothSocket tmp = null;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+            MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
+
+            try {
+                // Get a BluetoothSocket to connect with the given BluetoothDevice.
+                // MY_UUID is the app's UUID string, also used in the server code.
+
+                tmp = mmDevice.createInsecureRfcommSocketToServiceRecord(MY_UUID);
+
+            } catch (IOException e) {
+                Log.e(TAG, "Socket's create() method failed", e);
+            }
+            mmSocket = tmp;
+
+            if ( mmSocket != null ) {
+                try {
+                    tmpIn = mmSocket.getInputStream();
+                } catch (IOException e) {
+                    Log.e(TAG, "Error occurred when creating input stream", e);
+                }
+                try {
+                    tmpOut = mmSocket.getOutputStream();
+                } catch (IOException e) {
+                    Log.e(TAG, "Error occurred when creating output stream", e);
+                }
+            }
+
+            mmInStream = tmpIn;
+            mmOutStream = tmpOut;
+
+        }
+
         public void run() {
             // Cancel discovery because it otherwise slows down the connection.
             BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
@@ -79,6 +118,9 @@ public class BtConnectThread extends BaseObservable {
                 // Connect to the remote device through the socket. This call blocks
                 // until it succeeds or throws an exception.
                 updateStatusInfo(STATUS_CONNECTING);
+                //BluetoothServerSocket bluesocketserver = BluetoothAdapter.getDefaultAdapter().listenUsingInsecureRfcommWithServiceRecord("", MY_UUID);
+                //mmSocket = bluesocketserver.accept();
+
                 mmSocket.connect();
                 updateStatusInfo(STATUS_CONNECTED);
             } catch (IOException connectException) {
@@ -119,6 +161,74 @@ public class BtConnectThread extends BaseObservable {
             }
             //manageMyConnectedSocket(mmSocket);
         }
+
+        public boolean isConnected() {
+            boolean retVal = false;
+            if ( mmSocket !=  null )
+            {
+                retVal = mmSocket.isConnected();
+            }
+            return retVal;
+        }
+
+        public void write(byte[] bytes) {
+            try {
+                if ( mmSocket.isConnected() )
+                {
+                    mmOutStream.write(bytes);
+                }
+/*
+            // Share the sent message with the UI activity.
+            Message writtenMsg = mHandler.obtainMessage(
+                    MessageConstants.MESSAGE_WRITE, -1, -1, mmBuffer);
+            writtenMsg.sendToTarget();*/
+            } catch (IOException e) {
+                Log.e(TAG, "Error occurred when sending data", e);
+/*
+            // Send a failure message back to the activity.
+            Message writeErrorMsg =
+                    mHandler.obtainMessage(MessageConstants.MESSAGE_TOAST);
+            Bundle bundle = new Bundle();
+            bundle.putString("toast",
+                    "Couldn't send data to the other device");
+            writeErrorMsg.setData(bundle);
+            mHandler.sendMessage(writeErrorMsg);*/
+            }
+        }
+
+        public void cancel() {
+            try {
+                mmSocket.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Could not close the client socket", e);
+            }
+        }
+/*
+private final BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        private final BroadcastReceiver BTReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                BluetoothDevice device = mmDevice;//intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
+                    Log.d("Test", "DVC CON " + device.getAddress());
+                    if (device.getAddress().equals("98:D3:31:FB:2A:CE")) {
+                        BluetoothSocket socket = null;
+                        String data = "/0";
+                        byte[] bytes = data.getBytes();
+                        try {
+                            BluetoothServerSocket bluesocketserver = mBluetoothAdapter.listenUsingInsecureRfcommWithServiceRecord("", BTModuleUUID);
+                            socket = bluesocketserver.accept();
+                            if(socket.isConnected())
+                                socket.getOutputStream().write(bytes);
+                        } catch (IOException e) {
+                            Log.d("Test", e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        };*/
     }
 
     private ConnectionThread thread;
@@ -130,34 +240,6 @@ public class BtConnectThread extends BaseObservable {
             mmDevice = device;
             name.set(device.getName());
             updateStatusInfo(STATUS_DISCONNECTED);
-            BluetoothSocket tmp = null;
-            InputStream tmpIn = null;
-            OutputStream tmpOut = null;
-
-            try {
-                // Get a BluetoothSocket to connect with the given BluetoothDevice.
-                // MY_UUID is the app's UUID string, also used in the server code.
-                tmp = mmDevice.createInsecureRfcommSocketToServiceRecord(MY_UUID);
-            } catch (IOException e) {
-                Log.e(TAG, "Socket's create() method failed", e);
-            }
-            mmSocket = tmp;
-
-            if ( mmSocket != null ) {
-                try {
-                    tmpIn = mmSocket.getInputStream();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error occurred when creating input stream", e);
-                }
-                try {
-                    tmpOut = mmSocket.getOutputStream();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error occurred when creating output stream", e);
-                }
-            }
-
-            mmInStream = tmpIn;
-            mmOutStream = tmpOut;
 
     }
 
@@ -166,7 +248,7 @@ public class BtConnectThread extends BaseObservable {
             {
                 thread = new ConnectionThread();
             }
-            if ( thread.getState() == Thread.State.NEW && mmSocket.isConnected() == false )
+            if ( thread.getState() == Thread.State.NEW && thread.isConnected() == false )
             {
                 thread.start();
             }
@@ -174,7 +256,7 @@ public class BtConnectThread extends BaseObservable {
                     thread.getState() == Thread.State.WAITING ||
                     thread.getState() == Thread.State.TIMED_WAITING ||
                     thread.getState() == Thread.State.BLOCKED ||
-                    mmSocket.isConnected() )
+                    thread.isConnected() )
             {
                 cancel();
                 thread = new ConnectionThread();
@@ -191,11 +273,18 @@ public class BtConnectThread extends BaseObservable {
             return mmDevice.getAddress();
     }
 
-    public boolean isConnected() {
-            boolean retVal = false;
-            if ( mmSocket !=  null )
+    public void write(byte[] bytes) {
+            if ( thread != null && thread.isConnected() )
             {
-                retVal = mmSocket.isConnected();
+                thread.write(bytes);
+            }
+    }
+
+        public boolean isConnected() {
+            boolean retVal = false;
+            if ( thread !=  null )
+            {
+                retVal = thread.isConnected();
             }
             return retVal;
     }
@@ -205,37 +294,10 @@ public class BtConnectThread extends BaseObservable {
         mHandler = handler;
     }
 
-    public void write(byte[] bytes) {
-        try {
-            if ( mmSocket.isConnected() )
-            {
-                mmOutStream.write(bytes);
-            }
-/*
-            // Share the sent message with the UI activity.
-            Message writtenMsg = mHandler.obtainMessage(
-                    MessageConstants.MESSAGE_WRITE, -1, -1, mmBuffer);
-            writtenMsg.sendToTarget();*/
-        } catch (IOException e) {
-            Log.e(TAG, "Error occurred when sending data", e);
-/*
-            // Send a failure message back to the activity.
-            Message writeErrorMsg =
-                    mHandler.obtainMessage(MessageConstants.MESSAGE_TOAST);
-            Bundle bundle = new Bundle();
-            bundle.putString("toast",
-                    "Couldn't send data to the other device");
-            writeErrorMsg.setData(bundle);
-            mHandler.sendMessage(writeErrorMsg);*/
-        }
-    }
 
     // Closes the client socket and causes the thread to finish.
-        public void cancel() {
-            try {
-                mmSocket.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Could not close the client socket", e);
-            }
-        }
+    public void cancel() {
+        if ( thread !=  null )
+            thread.cancel();
     }
+}

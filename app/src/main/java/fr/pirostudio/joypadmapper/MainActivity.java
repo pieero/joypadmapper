@@ -53,10 +53,7 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
     protected static int REQUEST_ENABLE_BT;
 
-    protected static UUID MY_UUID;
-
     static {
-        MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
         REQUEST_ENABLE_BT = 1;
     }
 
@@ -287,16 +284,26 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
 
     KeyEventEx mDpad = new KeyEventEx();
 
-    protected void addLinkToView(int usbDevice, int keyCode) {
-        addLinkToView(usbDevice, keyCode, "", "");
+    protected void addAxisLinkToView(int usbDevice, int axisCode, String pressVal, String releaseVal) {
+        GamePadMapper mapper = m_mappedPads.get(usbDevice);
+        BtCommands command = new BtCommands(KeyEventEx.axisCodeToString(axisCode));
+        mapper.addAxisMap(axisCode, command);
+        addLinkToView(command, usbDevice, axisCode, "", "");
+
     }
 
-    protected void addLinkToView(int usbDevice, int keyCode, String pressVal, String releaseVal) {
+    protected void addKeyLinkToView(int usbDevice, int keyCode, String pressVal, String releaseVal) {
+        GamePadMapper mapper = m_mappedPads.get(usbDevice);
+        BtCommands command = new BtCommands(KeyEvent.keyCodeToString(keyCode));
+        mapper.addKeyMap(keyCode, command);
+        addLinkToView(command, usbDevice, keyCode, "", "");
+    }
+
+    protected void addLinkToView(BtCommands command, int usbDevice, int keyCode, String pressVal, String releaseVal) {
         String btAddress = m_usbId_to_btAddress.get(usbDevice);
         GamePadMapper mapper = m_mappedPads.get(usbDevice);
+
         GamepadKeyLinkBinding gklBinding = GamepadKeyLinkBinding.inflate(getLayoutInflater());
-        BtCommands command = new BtCommands(KeyEventEx.keyCodeToString(keyCode));
-        mapper.addKeyMap(keyCode, command);
         gklBinding.setCommand(command);
         View linkView = gklBinding.getRoot();
         Button keyButton = linkView.findViewById(R.id.button_key);
@@ -348,12 +355,12 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
         //if ( press != -1 )
         {
             //usbLog2.set(KeyEventEx.keyCodeToString(press));
-            Set<Integer> axis = KeyEventEx.getAxisInMotion(ev);
+            //Set<Integer> axis = KeyEventEx.getAxisInMotion(ev);
+            Set<Integer> keys = KeyEventEx.buildKeyCodeFromAxis(ev);
             String axisStr = "";
-            for(Integer i: axis)
+            for(Integer k: keys)
             {
-                axisStr += MotionEvent.axisToString(i) + ":";
-                axisStr += (int)(ev.getAxisValue(i) * 10.) + " ";
+                axisStr += MotionEvent.axisToString(k) + ",";
             }
             usbLog2.set(axisStr);
         }
@@ -364,7 +371,7 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
                     mapper.onKeyDown(press);
                 } else {
                     // Add to view and to map
-                    addLinkToView(ev.getDeviceId(), press);
+                    addAxisLinkToView(ev.getDeviceId(), press,"", "");
                 }
             }
             retVal = true;
@@ -395,7 +402,7 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
                 } else {
                     retVal = true;
                     // Add to view and to map
-                    addLinkToView(ev.getDeviceId(), ev.getKeyCode());
+                    addKeyLinkToView(ev.getDeviceId(), ev.getKeyCode(),"","");
                 }
 
             } else {

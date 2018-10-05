@@ -30,18 +30,18 @@ public class KeyEventEx {
         return retVal;
     }
 
-    public Set<Integer> buildKeyCodeFromAxis(MotionEvent ev) {
+    static public Set<Integer> buildKeyCodeFromAxis(MotionEvent ev) {
         Set<Integer> retVal = new HashSet<>();
         Set<Integer> axis = getAxisInMotion(ev);
         for(Integer x : axis )
         {
             if ( ev.getAxisValue(x) >= (float)1. )
             {
-                retVal.add(1000 + x);
+                retVal.add(10*x + 1);
             }
             if ( ev.getAxisValue(x) <= (float)-1. )
             {
-                retVal.add(2000 + x);
+                retVal.add(10*x + 2);
             }
         }
         return retVal;
@@ -147,27 +147,15 @@ public class KeyEventEx {
         }
     }
 
-    public static String keyCodeToString(int key)
+    public static String axisCodeToString(int key)
     {
         String retVal = "undefined";
-        switch(key)
-        {
-            case KEYCODE_DPAD_DOWN_LEFT:
-                retVal = "KEYCODE_DPAD_DOWN_LEFT";
-                break;
-            case KEYCODE_DPAD_DOWN_RIGHT:
-                retVal = "KEYCODE_DPAD_DOWN_RIGHT";
-                break;
-            case KEYCODE_DPAD_UP_LEFT:
-                retVal = "KEYCODE_DPAD_UP_LEFT";
-                break;
-            case KEYCODE_DPAD_UP_RIGHT:
-                retVal = "KEYCODE_DPAD_UP_RIGHT";
-                break;
-            default:
-                retVal = KeyEvent.keyCodeToString(key);
-                        break;
-        }
+        int axis = key / 10;
+        int direction = key % 10;
+        String directionStr = "+";
+        if ( direction == 2 )
+            directionStr = "-";
+        retVal = directionStr + MotionEvent.axisToString(axis);
         return retVal;
     }
 }
