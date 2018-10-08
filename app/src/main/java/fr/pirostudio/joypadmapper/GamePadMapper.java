@@ -1,18 +1,18 @@
 package fr.pirostudio.joypadmapper;
 
 import android.view.InputDevice;
+import android.widget.Toast;
 
+import java.nio.charset.Charset;
 import java.util.HashMap;
 
 public class GamePadMapper  {
 
-    private InputDevice m_Device;
     private BtConnectThread m_btConnect;
     private HashMap<Integer, BtCommands> m_keyMap;
     private HashMap<Integer, BtCommands> m_axisMap;
 
-    public GamePadMapper(InputDevice p_device) {
-        m_Device = p_device;
+    public GamePadMapper() {
         m_keyMap = new HashMap<>();
         m_axisMap = new HashMap<>();
         m_btConnect = null;
@@ -53,7 +53,7 @@ public class GamePadMapper  {
         {
             if ( m_btConnect != null && m_btConnect.isConnected()) {
                 BtCommands btCom = m_keyMap.get(keyCode);
-                m_btConnect.write(btCom.getPressValue().getBytes());
+                m_btConnect.write((btCom.getPressValue()+"\r\n").getBytes(Charset.forName("ascii")));
                 return true;
             }
         }
@@ -65,7 +65,19 @@ public class GamePadMapper  {
         {
             if ( m_btConnect != null && m_btConnect.isConnected()) {
                 BtCommands btCom = m_axisMap.get(keyCode);
-                m_btConnect.write(btCom.getPressValue().getBytes());
+                m_btConnect.write((btCom.getPressValue()+"\r\n").getBytes(Charset.forName("ascii")));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean onAxisKeyUp(int keyCode) {
+        if ( m_axisMap.containsKey( keyCode ) )
+        {
+            if ( m_btConnect != null && m_btConnect.isConnected()) {
+                BtCommands btCom = m_axisMap.get(keyCode);
+                m_btConnect.write((btCom.getReleaseValue()+"\r\n").getBytes(Charset.forName("ascii")));
                 return true;
             }
         }
@@ -78,7 +90,7 @@ public class GamePadMapper  {
         {
             if ( m_btConnect != null && m_btConnect.isConnected() ) {
                 BtCommands btCom = m_keyMap.get(keyCode);
-                m_btConnect.write(btCom.getReleaseValue().getBytes());
+                m_btConnect.write((btCom.getReleaseValue() + "\r\n").getBytes(Charset.forName("ascii")));
                 return true;
             }
         }

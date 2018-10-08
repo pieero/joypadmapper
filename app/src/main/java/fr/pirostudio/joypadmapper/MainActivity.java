@@ -33,7 +33,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
+import java.util.Stack;
 import java.util.UUID;
 
 import fr.pirostudio.joypadmapper.databinding.ActivityMainBinding;
@@ -76,6 +78,9 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
     protected Map<Integer,String> m_usbId_to_btAddress;
     protected Map<String,BtComContainer> m_btComContainers;
 
+    protected List<Integer> keyHistory;
+    protected Integer lastKey;
+
     ActivityMainBinding binding;
 
     BluetoothHandler btHandler = new BluetoothHandler(this);
@@ -89,6 +94,8 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
         m_mappedPads = new HashMap<>();
         m_usbId_to_btAddress = new HashMap<>();
         m_btComContainers = new HashMap<>();
+        keyHistory = new ArrayList<>();
+        lastKey = -1;
     }
 
     @Override
@@ -357,14 +364,32 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
                     if ( ev.getRepeatCount() == 0 ) {
                         if (mapper.handleKeyCode(keyCode)) {
                             if (ev.getAction() == KeyEvent.ACTION_DOWN) {
-                                Toast.makeText(MainActivity.this, "onKeyDown(" + KeyEventEx.keyCodeToString(keyCode) + ")", Toast.LENGTH_SHORT).show();
-
+                                if ( lastKey != -1 )
+                                {
+                                    keyHistory.add(lastKey);
+                                    retVal = mapper.onKeyDown(lastKey);
+                                }
+                                lastKey = keyCode;
                                 retVal = mapper.onKeyDown(keyCode);
+
                             }
                             if (ev.getAction() == KeyEvent.ACTION_UP) {
-                                Toast.makeText(MainActivity.this, "onKeyUp(" + KeyEventEx.keyCodeToString(keyCode) + ")", Toast.LENGTH_SHORT).show();
-
-                                retVal = mapper.onKeyUp(keyCode);
+                                if ( keyCode == lastKey )
+                                {
+                                    retVal = mapper.onKeyUp(keyCode);
+                                    if( keyHistory.isEmpty() == false ) {
+                                        keyHistory.remove(keyHistory.size() - 1);
+                                        lastKey = -1;
+                                        if (keyHistory.isEmpty() == false) {
+                                            lastKey = keyHistory.get(keyHistory.size() - 1);
+                                            retVal = mapper.onKeyUp(lastKey);
+                                        }
+                                    }
+                                }
+                                else if (keyHistory.contains(keyCode))
+                                {
+                                    keyHistory.remove((Object)keyCode);
+                                }
                             }
                         } else {
                             // Add to view and to map

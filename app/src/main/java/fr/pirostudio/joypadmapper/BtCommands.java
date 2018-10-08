@@ -38,7 +38,9 @@ public class BtCommands extends BaseObservable {
     }
 
     public BtCommands(String name) {
-        keyName.set(name);
-        threshold.set((float)0.);
+        this.keyName.set(name);
+        this.threshold.set((float)0.);
+        this.pressValue = "";
+        this.releaseValue = "";
     }
 }

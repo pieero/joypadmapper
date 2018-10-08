@@ -45,14 +45,13 @@ class BluetoothHandler extends Handler {
                     while (it.hasNext()) {
                         Map.Entry pair = (Map.Entry)it.next();
                         if ( pair.getValue() == link.btAddress ) {
-                            m_main.usbLog2.set(String.format(Locale.ENGLISH, "unmap %d(%d) -> %s",pair.getKey(), link.usbIndex, link.btAddress));
-                            Integer usbDeviceId = (Integer)pair.getKey();
-                            if (m_main.m_mappedPads.containsKey(usbDeviceId)) {
-                                m_main.m_mappedPads.get(usbDeviceId).setBtConnect(null);
+                            m_main.usbLog2.set(String.format(Locale.ENGLISH, "unmap %s(%d) -> %s",pair.getKey(), link.usbIndex, link.btAddress));
+                            if (m_main.m_mappedPads.containsKey(link.btAddress)) {
+                                m_main.m_mappedPads.get(link.btAddress).setBtConnect(null);
                             }
                             else
                             {
-                                m_main.usbLog2.set("unmap: no usbDev "+ String.valueOf(usbDeviceId) +" in m_mappedPads");
+                                m_main.usbLog2.set("unmap: no btDev "+ (link.btAddress) +" in m_mappedPads");
                             }
                             it.remove(); // avoids a ConcurrentModificationException
                             break;
@@ -62,8 +61,8 @@ class BluetoothHandler extends Handler {
                     if( m_main.gamepadId_list.size() > link.usbIndex ) {
                         int usbDeviceId = m_main.gamepadId_list.get(link.usbIndex);
                         m_main.m_usbId_to_btAddress.put(usbDeviceId, link.btAddress);
-                        if (m_main.m_mappedPads.containsKey(usbDeviceId) && m_main.m_mappedBtConnect.containsKey(link.btAddress)) {
-                            m_main.m_mappedPads.get(usbDeviceId).setBtConnect(m_main.m_mappedBtConnect.get(link.btAddress));
+                        if (m_main.m_mappedPads.containsKey(link.btAddress) && m_main.m_mappedBtConnect.containsKey(link.btAddress)) {
+                            m_main.m_mappedPads.get(link.btAddress).setBtConnect(m_main.m_mappedBtConnect.get(link.btAddress));
                         }
                         else
                         {

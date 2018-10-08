@@ -3,4 +3,5 @@
     <item type="id" name="tag_btAddress" />
     <item type="id" name="tag_usbDevice" />
     <item type="id" name="tag_keyCode" />
+    <item type="id" name="tag_btCommand" />
 </resources>
