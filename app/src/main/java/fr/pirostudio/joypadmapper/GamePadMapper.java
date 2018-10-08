@@ -1,18 +1,64 @@
 package fr.pirostudio.joypadmapper;
 
 import android.view.InputDevice;
-import android.widget.Toast;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 
-import java.nio.charset.Charset;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class GamePadMapper  {
 
     private BtConnectThread m_btConnect;
-    private HashMap<Integer, BtCommands> m_keyMap;
-    private HashMap<Integer, BtCommands> m_axisMap;
+    private Map<Integer, BtCommands> m_keyMap;
+    private Set<Integer> m_currentAxis;
 
-    public GamePadMapper() {
+    private static java.lang.reflect.Type mapType = new TypeToken<Map<Integer, BtCommands>>() {}.getType();
+
+    public void saveToFile(FileOutputStream fOut) {
+        try {
+            fOut.write(toJson().getBytes());
+        } catch(Exception e) {
+
+        }
+    }
+
+    public void loadFromFile(FileInputStream fIn) {
+        try {
+            int c;
+            String temp="";
+            while( (c = fIn.read()) != -1){
+                temp = temp + Character.toString((char)c);
+            }
+            loadJson(temp);
+        } catch(Exception e) {
+
+        }
+    }
+
+    public String toJson() {
+        Gson g = new Gson();
+        String retVal = "";
+        retVal += g.toJson(m_keyMap, mapType);
+        return retVal;
+    }
+
+    public void loadJson(String json) {
+        Gson g = new Gson();
+        m_keyMap = g.fromJson(json, mapType);
+    }
+
+    public GamePadMapper(InputDevice p_device) {
+        m_Device = p_device;
         m_keyMap = new HashMap<>();
         m_axisMap = new HashMap<>();
         m_btConnect = null;
@@ -31,11 +77,6 @@ public class GamePadMapper  {
         return m_keyMap.get(keyCode);
     }
 
-    void addAxisMap(int axis, BtCommands command)
-    {
-        m_axisMap.put(axis,command);
-    }
-
     void clearMap()
     {
         m_keyMap.clear();
@@ -44,8 +85,45 @@ public class GamePadMapper  {
     public boolean handleKeyCode(int keyCode) {
         return m_keyMap.containsKey( keyCode );
     }
-    public boolean handleAxisCode(int keyCode) {
-        return m_axisMap.containsKey( keyCode );
+
+    public Set<Integer> handleEvent(MotionEvent ev) {
+        Set<Integer> retVal = new HashSet<>();
+        Set<Integer> currentKeys = KeyEventEx.buildKeyCodeFromAxis(ev);
+        Set<Integer> oldKeys = new HashSet<>(m_currentAxis);
+        Set<Integer> newKeys = new HashSet<>();
+        for (Integer key : currentKeys) {
+            if (oldKeys.contains(key)) {
+                oldKeys.remove(key);
+            } else {
+                newKeys.add(key);
+            }
+        }
+        for (Integer oldKey : oldKeys) {
+            onKeyUp(oldKey);
+        }
+        for (Integer newKey : newKeys) {
+            if ( m_keyMap.containsKey(newKey) ) {
+                onKeyDown(newKey);
+            }
+            else {
+                retVal.add(newKey);
+            }
+        }
+        m_currentAxis = currentKeys;
+        return retVal;
+    }
+
+    public boolean handleEvent(KeyEvent ev) {
+        boolean retVal = false;
+        if ( m_keyMap.containsKey(ev.getKeyCode()) ) {
+            if (ev.getAction() == KeyEvent.ACTION_UP) {
+                onKeyUp(ev.getKeyCode());
+            } else if (ev.getAction() == KeyEvent.ACTION_DOWN) {
+                onKeyDown(ev.getKeyCode());
+            }
+            retVal = true;
+        }
+        return retVal;
     }
 
     public boolean onKeyDown(int keyCode) {
@@ -54,30 +132,6 @@ public class GamePadMapper  {
             if ( m_btConnect != null && m_btConnect.isConnected()) {
                 BtCommands btCom = m_keyMap.get(keyCode);
                 m_btConnect.write((btCom.getPressValue()+"\r\n").getBytes(Charset.forName("ascii")));
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean onAxisKeyDown(int keyCode) {
-        if ( m_axisMap.containsKey( keyCode ) )
-        {
-            if ( m_btConnect != null && m_btConnect.isConnected()) {
-                BtCommands btCom = m_axisMap.get(keyCode);
-                m_btConnect.write((btCom.getPressValue()+"\r\n").getBytes(Charset.forName("ascii")));
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public boolean onAxisKeyUp(int keyCode) {
-        if ( m_axisMap.containsKey( keyCode ) )
-        {
-            if ( m_btConnect != null && m_btConnect.isConnected()) {
-                BtCommands btCom = m_axisMap.get(keyCode);
-                m_btConnect.write((btCom.getReleaseValue()+"\r\n").getBytes(Charset.forName("ascii")));
                 return true;
             }
         }

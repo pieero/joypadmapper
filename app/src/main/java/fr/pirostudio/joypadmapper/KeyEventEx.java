@@ -32,17 +32,17 @@ public class KeyEventEx {
         {
             if ( ev.getAxisValue(x) >= (float)1. )
             {
-                retVal.add(10*x + 1);
+                retVal.add(100*x + 1);
             }
             if ( ev.getAxisValue(x) <= (float)-1. )
             {
-                retVal.add(10*x + 2);
+                retVal.add(100*x + 2);
             }
         }
         return retVal;
     }
 
-    public static boolean isDpadDevice(InputEvent event) {
+    static public boolean isDpadDevice(InputEvent event) {
         // Check that input comes from a device with directional pads.
         if ((event.getSource() & InputDevice.SOURCE_DPAD) != InputDevice.SOURCE_DPAD) {
             return true;
@@ -54,8 +54,8 @@ public class KeyEventEx {
     public static String axisCodeToString(int key)
     {
         String retVal = "undefined";
-        int axis = key / 10;
-        int direction = key % 10;
+        int axis = key / 100;
+        int direction = key % 100;
         String directionStr = "+";
         if ( direction == 2 )
             directionStr = "-";
