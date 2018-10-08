@@ -283,7 +283,7 @@ public class MainActivity extends AppCompatActivity implements InputManager.Inpu
         GamePadMapper mapper = m_mappedPads.get(btAddress);
         String keyCodeName = KeyEventEx.axisCodeToString(axisCode);
         BtCommands command = new BtCommands(keyCodeName);
-        mapper.addAxisMap(axisCode, command);
+        mapper.addKeyMap(axisCode, command);
         addLinkToView(command, usbDevice, axisCode, "", "");
 
     }

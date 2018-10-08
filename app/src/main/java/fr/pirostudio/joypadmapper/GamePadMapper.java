@@ -4,12 +4,13 @@ import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+//import com.google.gson.Gson;
+//import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -22,7 +23,7 @@ public class GamePadMapper  {
     private Map<Integer, BtCommands> m_keyMap;
     private Set<Integer> m_currentAxis;
 
-    private static java.lang.reflect.Type mapType = new TypeToken<Map<Integer, BtCommands>>() {}.getType();
+    //private static java.lang.reflect.Type mapType = new TypeToken<Map<Integer, BtCommands>>() {}.getType();
 
     public void saveToFile(FileOutputStream fOut) {
         try {
@@ -46,26 +47,29 @@ public class GamePadMapper  {
     }
 
     public String toJson() {
-        Gson g = new Gson();
+        //Gson g = new Gson();
         String retVal = "";
-        retVal += g.toJson(m_keyMap, mapType);
+        //retVal += g.toJson(m_keyMap, mapType);
         return retVal;
     }
 
     public void loadJson(String json) {
-        Gson g = new Gson();
-        m_keyMap = g.fromJson(json, mapType);
+        //Gson g = new Gson();
+        //m_keyMap = g.fromJson(json, mapType);
     }
 
-    public GamePadMapper(InputDevice p_device) {
-        m_Device = p_device;
+    public GamePadMapper() {
         m_keyMap = new HashMap<>();
-        m_axisMap = new HashMap<>();
         m_btConnect = null;
+        m_currentAxis= new HashSet<>();
     }
 
     void setBtConnect(BtConnectThread p_btConnect) {
         m_btConnect = p_btConnect;
+    }
+
+    public Set<Integer> keys() {
+        return m_keyMap.keySet();
     }
 
     void addKeyMap(int key, BtCommands command)
